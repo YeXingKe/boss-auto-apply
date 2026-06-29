@@ -1,0 +1,7 @@
+[console_scripts]
+boss-auto-apply = boss_auto_apply.__main__:main
+boss-dashboard = boss_auto_apply.cli.dashboard:main
+boss-doctor = boss_auto_apply.cli.doctor:main
+boss-monitor-gui = boss_auto_apply.cli.monitor_gui:main
+boss-status = boss_auto_apply.cli.status:main
+boss-sync-storage = boss_auto_apply.services.storage:main

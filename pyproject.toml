@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "boss-auto-apply"
+version = "0.1.0"
+description = "BOSS 直聘本地自动求职助手"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "DrissionPage>=4.1.0",
+    "PyYAML>=6.0.2",
+]
+
+[project.scripts]
+boss-auto-apply = "boss_auto_apply.__main__:main"
+boss-doctor = "boss_auto_apply.cli.doctor:main"
+boss-dashboard = "boss_auto_apply.cli.dashboard:main"
+boss-monitor-gui = "boss_auto_apply.cli.monitor_gui:main"
+boss-status = "boss_auto_apply.cli.status:main"
+boss-sync-storage = "boss_auto_apply.services.storage:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+boss_auto_apply = ["py.typed"]
