@@ -1,7 +1,18 @@
 """
-登录 & Cookie管理
-- 首次: 打开BOSS直聘登录页，用户手动扫码，保存Cookie
-- 后续: 自动加载Cookie，检测有效性
+登录 & Cookie / Chrome Profile 管理（业务入口的「身份证」）
+
+业务目标：
+  让自动化用「已经登录过的浏览器」访问 BOSS，而不是每次扫码。
+
+流程：
+  1. 首次 --login：打开登录页，用户扫码，登录态写入独立 Chrome profile
+  2. 后续运行：复用同一 profile（可选 Cookie 文件兜底）
+  3. check_login()：用页面元素判断是否仍在登录态
+
+技术：
+  - DrissionPage 控制 Chrome
+  - user-data-dir = data/<BOSS_PROFILE_NAME>
+  - 调试端口默认 9222（可用环境变量改）
 """
 import json
 import os
@@ -11,10 +22,12 @@ from DrissionPage import ChromiumPage, ChromiumOptions
 
 
 class BossAuth:
+    """BOSS 登录态封装：创建浏览器、检测登录、恢复到聊天页。"""
     COOKIE_FILE = "cookies.json"
     BASE_URL = "https://www.zhipin.com"
     LOGIN_URL = "https://www.zhipin.com/web/user/?ka=header-login"
     CHAT_URL = os.environ.get("BOSS_CHAT_URL", "https://www.zhipin.com/web/geek/chat")
+    # 登录后才可能出现的选择器；命中任意一个可辅助判断已登录
     LOGGED_IN_SELECTORS = (
         ".user-nav",
         ".nav-figure",
@@ -29,6 +42,7 @@ class BossAuth:
         ".chat-no-data",
         ".rec-job-list",
     )
+    # 登录页/验证页文案；若大量出现则判定未登录
     NEGATIVE_LOGIN_MARKERS = (
         "扫码登录",
         "密码登录",
@@ -43,7 +57,8 @@ class BossAuth:
 
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
-        self.profile_name = os.environ.get("BOSS_PROFILE_NAME", "chrome_profile_fengshen").strip() or "chrome_profile_fengshen"
+        # 独立 profile：避免污染用户日常 Chrome，也便于多账号隔离
+        self.profile_name = os.environ.get("BOSS_PROFILE_NAME", "chrome_profile_zws").strip() or "chrome_profile_zws"
         self.profile_path = data_dir / self.profile_name
         cookie_name = self.COOKIE_FILE if self.profile_name == "chrome_profile" else f"cookies.{self.profile_name}.json"
         self.cookie_path = data_dir / cookie_name

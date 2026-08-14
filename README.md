@@ -2,6 +2,8 @@
 
 BOSS 直聘本地自动求职助手。当前主线是测试开发 / 测试负责人 / Agent 测试方向：自动筛选岗位、发送招呼语、监听 HR 未读消息、用 AI 生成回复、按策略发送在线简历，并记录状态和日志。
 
+**业务小白先看：** [docs/business-flow.md](docs/business-flow.md)（投递 / 聊天 / AI 全流程人话说明）。
+
 ## 项目结构
 
 采用 Python 官方推荐的 **src layout**：

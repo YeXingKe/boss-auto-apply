@@ -1,7 +1,13 @@
 """
-智能回复引擎
-根据HR消息意图 + 简历信息，生成合适的回复
-默认规则匹配 + 模板；高价值意图可选走 AI (BOSS_AI_REPLY=1 开启)
+智能回复引擎（业务线 B 的「听懂 HR 在说什么」）
+
+流程：
+  1. MessageClassifier 按优先级正则匹配意图（噪音/诈骗优先于泛意图）
+  2. 根据意图选规则模板；高价值意图可再调 AI
+  3. 输出给 ChatProcessor → reply_guard → 真正发送
+
+默认：规则 + 模板；BOSS_AI_REPLY=1 时部分意图走 AI。
+候选人信息来自 .env.local.ps1，避免把隐私写死进仓库。
 """
 import re
 from datetime import datetime
@@ -18,9 +24,9 @@ RESUME = load_resume()
 
 
 class MessageClassifier:
-    """消息意图分类器 — 按优先级从高到低排列，精确意图优先于泛意图"""
+    """消息意图分类器 — 按优先级从高到低排列，精确意图优先于泛意图。"""
 
-    # 意图 → 关键词（按优先级排列！靠前的先匹配）
+    # 意图 → 关键词（靠前的先匹配；命中即返回，后面不再比）
     INTENT_PATTERNS_ORDERED = [
         # === 最高优先级：系统噪音/诈骗/OD外包，直接静默或拒绝 ===
         ("system_noise", [

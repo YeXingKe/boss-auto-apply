@@ -1,7 +1,16 @@
 """
-Auto apply - send greeting message on BOSS zhipin
-2025 behavior: clicking 立即沟通 auto-sends greeting and navigates to chat page.
-No need to manually type/send a message.
+自动投递（业务线 A 的核心：打开 JD → 打分 → 点「立即沟通」）
+
+业务背景：
+  BOSS 2025 行为大致是：点击「立即沟通」后，平台会自动发出默认招呼语，
+  并跳到聊天页。本模块在此基础上做：
+  - JD 文本抓取（给匹配分 / AI 招呼语用）
+  - jd_matcher 规则打分，太低不投
+  - 可选 AI 边界分二次审核
+  - 可选追发更贴合 JD 的招呼语
+  - dry_run：只预演不点击，方便联调
+
+注意：真正「和 HR 多轮聊天」在 chat 包；这里只负责「第一次搭上话」。
 """
 import time
 import random
@@ -16,7 +25,7 @@ except Exception:
     def should_use_ai(*a, **kw): return False
     def ai_review_match(*a, **kw): return None
 
-# JD-简历匹配打分，低分skip避免无脑海投
+# JD-简历匹配打分，低分 skip，避免无脑海投浪费沟通额度
 try:
     from boss_auto_apply.apply.jd_matcher import should_apply as jd_should_apply
 except Exception:
@@ -24,7 +33,7 @@ except Exception:
 
 
 class DailyCommunicationLimitReached(RuntimeError):
-    """BOSS daily communication quota has been reached."""
+    """BOSS 当日沟通额度用尽时抛出，上层应停止继续投递。"""
 
 
 def maybe_ai_override_match(job: dict, score: int, reason: str, min_score: int = 55, boundary_min: int = 45):
@@ -48,6 +57,7 @@ def maybe_ai_override_match(job: dict, score: int, reason: str, min_score: int =
 
 
 class JobApplier:
+    """对单个岗位执行：打开详情 → 匹配 → 沟通 → 记日志。"""
     def __init__(self, page, config: dict, logger, dry_run: bool = False):
         self.page = page
         self.config = config
@@ -55,6 +65,12 @@ class JobApplier:
         self.dry_run = dry_run
 
     def apply(self, job: dict) -> bool:
+        """
+        尝试向一个岗位发起沟通。
+
+        返回 True 表示沟通流程成功（或 dry_run 预演成功）；
+        False 表示跳过/失败（原因已写入 logger）。
+        """
         title = job.get("title", "?")
         company = job.get("company", "?")
         url = job.get("url", "")
@@ -63,7 +79,7 @@ class JobApplier:
         self.logger.update_status("OPEN_DETAIL", job=job, dry_run=self.dry_run)
 
         try:
-            # Open job detail page
+            # 打开 JD 详情页
             self.page.get(url)
             random_delay(2, 4)
 

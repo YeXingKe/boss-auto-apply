@@ -1,11 +1,17 @@
 """
-BOSS直聘 自动聊天处理
-整合：聊天监控 + 智能回复 + 面试管理
+BOSS 直聘自动聊天处理（业务线 B：跟 HR 谈下去）
 
-用法:
-  python main.py --chat          # 扫描聊天并自动回复
-  python main.py --chat-dry      # 只扫描不发送（预览模式）
-  python main.py --interviews    # 查看面试安排
+整合：
+  - ChatMonitor：找未读会话、读消息
+  - reply_engine：意图分类 + 规则/AI 回复文案
+  - reply_guard：发送前安全清洗
+  - ChatActions：真正在页面里发文字 / 发在线简历
+  - InterviewManager：面试邀约落库 + 可选飞书
+
+用法：
+  python -m boss_auto_apply --chat
+  python -m boss_auto_apply --chat-dry
+  python -m boss_auto_apply --interviews
 """
 import time
 import os
@@ -17,7 +23,7 @@ from boss_auto_apply.ai.reply_guard import sanitize_reply
 from boss_auto_apply.paths import DATA_DIR
 from boss_auto_apply.services.manual_review import assess_manual_review
 
-# 附件简历PDF路径（环境变量覆盖 > 默认 data/resume.pdf）
+# 附件简历 PDF 路径：默认关闭上传；仅当显式允许时才会用到
 RESUME_FILE = os.environ.get(
     "BOSS_RESUME_FILE",
     str(DATA_DIR / "resume.pdf"),
@@ -34,6 +40,13 @@ from boss_auto_apply.browser.anti_detect import random_delay
 
 
 class ChatProcessor:
+    """
+    聊天业务编排器。
+
+    auto_resume_on_hr_message=True 时：
+      HR 有新消息且本会话尚未记录「已发简历」→ 回复后追加发在线简历。
+    dry_run=True 时只预览，不真实发送。
+    """
     def __init__(self, page, data_dir: Path, dry_run: bool = False, auto_resume_on_hr_message: bool = False):
         self.page = page
         self.data_dir = data_dir
@@ -45,7 +58,7 @@ class ChatProcessor:
         self.stats = {"scanned": 0, "replied": 0, "interviews": 0, "skipped": 0, "actions": 0}
 
     def _mark_resume_status(self, company: str, hr_name: str, job_title: str, status: str, note: str = ""):
-        """Persist resume-send state so sweeps do not rely only on current DOM."""
+        """把「是否已发简历」写入 chat_states，避免重复发送。"""
         try:
             key = _cs_key(company, hr_name, job_title)
             extra = {
@@ -65,7 +78,7 @@ class ChatProcessor:
             print(f"  ⚠ resume state update failed: {exc}")
 
     def _get_resume_status(self, company: str, hr_name: str, job_title: str) -> str:
-        """Read persisted resume-send state for duplicate-action protection."""
+        """读取该会话已记录的简历发送状态。"""
         try:
             key = _cs_key(company, hr_name, job_title)
             state = _cs_get(key) or {}

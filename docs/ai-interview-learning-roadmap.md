@@ -1,18 +1,18 @@
 # AI 面试学习路线与项目话术
 
-适用定位：`4年 Java 后端 + AI 应用工程化 + RAG + Agent + Spring Boot/Spring Cloud`。
+适用定位：`5年 前端 + AI 应用工程化 + AI Agent + RAG + Agent + go/python`。
 
 这份资料优先解决三个问题：
 
 1. 面试前到底按什么顺序学。
-2. BM25、HNSW、双向召回、RAG、LangChain4j、Spring AI 怎么讲。
+2. BM25、HNSW、混合召回、RAG、Agent、Python/Go 编排、前端流式怎么讲。
 3. 项目中遇到的困难怎么回答得像真实做过。
 
 ## 0. 一句话定位
 
 面试时先把自己钉在这个位置：
 
-> 我不是算法训练方向，我的定位是 Java 后端 + AI 应用工程化落地。我的重点是把 ASR、RAG、LLM、Agent 工具调用稳定接进业务系统，解决检索准确、调用稳定、结果可解释、成本可控和线上可观测这些工程问题。
+> 我不是算法训练方向。我的定位是 **5 年前端 + AI 应用工程化**：能把 RAG、Agent、LLM 做成可上线的产品和链路。前端负责对话/质检/复核体验与流式交互；Go/Python 负责编排、检索、任务与模型调用；重点解决检索准确、工具安全、流式稳定、结果可解释、成本可控和线上可观测。
 
 不要说自己训练大模型，也不要把 RAG 说成“AI 长期知识库”。要说：
 
@@ -30,14 +30,14 @@
 -> ASR 转文本
 -> RAG 召回质检规则
 -> LLM 做结构化判断
--> 后端做任务状态、重试、入库、查询、复核
+-> 前端复核台 + Python/Go 任务状态、重试、入库、查询
 -> 难点是准确、稳定、可解释、可追踪
 ```
 
 标准讲法：
 
-> 我做的是金融客服场景下的 AI 质检平台。系统先把通话音频通过 ASR 转成文本，再把客服和客户的对话片段拿去检索质检规则、话术规范、敏感词和业务制度。召回到相关规则后，把规则、通话片段和评分标准一起交给 LLM 判断，输出是否违规、命中规则、证据片段、置信度和原因。  
-> 我主要负责 Java 后端工程链路，包括任务状态流转、模型调用封装、RAG 检索接口、结果入库查询、失败重试、日志追踪和部分 Prompt/召回策略调优。
+> 我做的是金融客服场景下的 AI 质检平台。系统先把通话音频通过 ASR 转成文本，再把对话片段拿去 RAG 检索质检规则、话术规范和业务制度，然后交给 LLM 做结构化判断，输出是否违规、命中规则、证据片段、置信度和原因。  
+> 我主要负责 **前端 + AI 应用工程化**：前端做质检结果列表、证据高亮、人工复核台、Prompt/规则版本对比和流式调试面板；工程侧参与 RAG 链路（chunk、混合召回、rerank）、Agent 工具 schema、模型调用封装（超时/重试/结构化 JSON）、任务状态与 badcase 回流。后端编排以 **Python FastAPI + 任务队列** 为主，部分高并发接口用 **Go** 做网关和限流。
 
 ### 第二阶段：补 RAG 检索知识
 
@@ -58,13 +58,26 @@
 
 面试官问 RAG，先别讲框架，先讲链路。框架只是实现手段。
 
-### 第三阶段：补 Java AI 框架
+### 第三阶段：补 AI 应用框架（按岗位侧重）
 
-重点只背能落地的：
+**Python（RAG / Agent 编排主战场）**
 
-- LangChain4j：Java 生态的 LLM 应用框架，适合 AI Service、RAG、工具调用、记忆、EmbeddingStore。
-- Spring AI：Spring 官方风格的 AI 抽象，适合 ChatClient、Advisor、VectorStore、Tool/Function Calling、Spring Boot 集成。
-- 生产项目里不要让业务代码到处直接调模型 API，要封装成 service，并做超时、重试、日志、成本统计和降级。
+- LangChain / LangGraph：链式编排、Agent 状态机、工具调用、RAG retriever。
+- LlamaIndex：文档索引、chunk、混合检索、query engine。
+- FastAPI + Pydantic：结构化入参/出参、OpenAPI、与前端 TypeScript 类型对齐。
+
+**Go（高并发与平台化）**
+
+- Gin/Fiber：AI 网关、鉴权、限流、SSE 代理。
+- 任务调度、MQ 消费、模型调用超时与熔断。
+
+**前端（差异化优势）**
+
+- 流式输出：SSE / fetch stream / WebSocket，打字机效果与中断重试。
+- 对话 UI：多轮上下文、工具调用过程可视化、citation 来源展示。
+- 运营台：badcase 标注、召回结果 debug、Prompt A/B、阈值配置。
+
+生产里不要让前端或业务代码到处直接调模型 API，要经 **BFF/AI Service** 统一做超时、重试、日志、成本统计和降级。
 
 ### 第四阶段：补项目难点
 
@@ -245,74 +258,37 @@ RRF 是 Reciprocal Rank Fusion，用排名融合多路召回结果。它不强�
 
 > 质检场景更怕漏掉关键规则，所以第一阶段会稍微放宽召回，再通过阈值、元数据过滤和 rerank 控制噪声。如果正确规则没召回，是召回问题；如果召回了但排很后，是排序问题；如果规则在前面但模型还判错，才看 Prompt 和模型。
 
-## 7. LangChain4j
+## 7. Python / Go AI 编排（原 Java 框架章节）
 
-### LangChain4j 是什么
-
-LangChain4j 是 Java 生态里的 LLM 应用开发框架，提供模型调用、Prompt、AI Service、Chat Memory、RAG、EmbeddingStore、工具调用等能力。
+### Python 侧怎么讲
 
 面试短答：
 
-> LangChain4j 更像 Java 版的大模型应用编排框架，适合快速做 AI Service、RAG 和工具调用。它的价值是把模型、检索、记忆、工具这些能力抽象出来，让 Java 项目不用从零封装所有细节。
+> Python 更适合 RAG 脚本、embedding 批处理、Agent 原型和评测流水线。我会用 FastAPI 暴露检索和对话接口，Pydantic 约束结构化输出，Celery/Redis 做异步质检任务，LangChain 或 LangGraph 管工具调用和状态，但生产关键链路（日志、重试、权限）仍要自己可控。
 
-### 面试要知道的核心概念
-
-```text
-ChatModel：聊天模型抽象。
-EmbeddingModel：文本向量化模型。
-EmbeddingStore：向量存储。
-ContentRetriever：RAG 内容检索器。
-AiServices / @AiService：把接口声明成 AI 服务。
-ChatMemory：会话记忆。
-Tools：让模型调用 Java 方法或外部工具。
-```
-
-### 怎么结合 Spring Boot
-
-> 在 Spring Boot 项目里，可以把 ChatModel、EmbeddingModel、EmbeddingStore、ContentRetriever 注册成 Bean，再定义 AI Service 接口。业务层调用 AI Service，就像调用普通 service 一样。生产里还要在外层加超时、重试、日志、traceId、Prompt 版本和成本统计。
-
-### 面试防守
-
-如果没在线上深用过，不要硬说精通。可以说：
-
-> 我对 LangChain4j 的理解主要在工程接入层，知道它能简化 RAG、AI Service 和工具调用。但生产里我不会完全依赖框架黑盒，关键链路比如检索结果、模型请求、输出解析、异常重试和日志都要自己可控。
-
-## 8. Spring AI
-
-### Spring AI 是什么
-
-Spring AI 是 Spring 生态里的 AI 应用抽象，目标是用 Spring 熟悉的方式接入模型、embedding、vector store、工具调用和 RAG。
-
-面试短答：
-
-> Spring AI 更适合已有 Spring Boot 企业项目。它提供 ChatClient、模型抽象、VectorStore、Advisor、Tool/Function Calling 等能力，让模型调用可以按 Spring Bean 和配置方式管理。
-
-### 面试要知道的核心概念
+核心概念：
 
 ```text
-ChatClient：高层模型调用客户端。
-ChatModel：底层聊天模型抽象。
-EmbeddingModel：向量化模型。
-VectorStore：向量库抽象。
-Advisor：类似拦截器/增强器，可用于记忆、RAG 上下文、日志等。
-Tool / Function Calling：把 Java 方法或 Bean 暴露给模型调用。
+Retriever / VectorStore：RAG 检索
+Tool / Function Calling：Agent 工具
+Structured Output：Pydantic / JSON Schema
+Streaming：SSE 流式返回给前端
+Callback / Trace：LangSmith 或自研 traceId
 ```
 
-### Spring AI 怎么用于 RAG
+### Go 侧怎么讲
 
-可以这样讲：
+> Go 适合 AI 网关和高并发场景：统一鉴权、限流、SSE 代理、模型路由、熔断降级。业务编排若已在 Python，Go 可以只做边缘接入，避免重复实现 RAG 逻辑。
 
-> 文档先切分并通过 EmbeddingModel 向量化，存进 VectorStore。用户问题进来后，先从 VectorStore 检索相关 chunk，再通过 Advisor 或业务代码把检索结果拼进 Prompt，最后用 ChatClient 调模型生成答案。生产里会在这个流程外加权限过滤、topK、阈值、rerank、引用来源和日志。
+### 前端怎么接
 
-### Spring AI 和 LangChain4j 怎么选
+> 前端不直连模型 Key。通过 BFF 调 `/chat/stream`、`/rag/debug`、`/task/{id}`；流式用 EventSource 或 fetch reader；展示 citation、工具调用步骤和置信度；复核台支持证据跳转和 badcase 一键标注。
 
-面试回答：
+### 和「纯后端 AI 岗」的差异
 
-> 如果项目已经是 Spring Boot/Spring Cloud，Spring AI 集成会更自然，Bean、配置、监控和企业工程习惯更统一。LangChain4j 的 AI Service、RAG、工具调用抽象也很成熟，适合 Java 生态快速搭 AI 应用。实际选型我会看团队熟悉度、模型和向量库支持、是否需要复杂 Agent 编排、可观测性和生产可控程度。
+> 我能讲清 RAG/Agent 链路，也能落地 **对话产品体验** 和 **工程观测**。很多团队缺的是「模型能跑 + 运营能用 + 出问题能查」，这正是前端 + 工程化的组合价值。
 
-不要争谁绝对更好。说“看场景”。
-
-## 9. 项目困难怎么讲
+## 8. 项目困难怎么讲
 
 ### 难点 1：RAG 召回不准
 
@@ -391,9 +367,9 @@ Tool / Function Calling：把 Java 方法或 Bean 暴露给模型调用。
 
 > 这时重点不是召回，而是 Prompt、输出格式和模型判断。可以强化判断标准，要求模型引用证据片段，输出结构化 JSON；对低置信度转人工；也可以加入 few-shot 示例或二次校验。关键是先确认正确规则已经在上下文里。
 
-### Q8：LangChain4j 和 Spring AI 你熟吗？
+### Q8：LangChain / LangGraph 和自研编排怎么选？
 
-> 我熟悉它们解决的问题。LangChain4j 更偏 Java LLM 应用编排，AI Service、RAG、工具调用比较方便；Spring AI 更贴 Spring Boot，ChatClient、VectorStore、Advisor、Tool Calling 这些抽象适合企业项目。真正落地时我会把模型调用封装成业务 service，并补上超时、重试、日志、Prompt 版本和成本统计，而不是只依赖框架默认能力。
+> 快速验证和 Agent 状态机用 LangGraph/LangChain 效率高；生产里关键链路（权限、审计、结构化输出、成本）我会封装在 FastAPI/Go 服务里，框架只负责编排，不替代业务治理。团队若以 Java 为主，可提 LangChain4j/Spring AI 作对比，但我的主力栈是 Python + 前端。
 
 ### Q9：Agent 工具调用怎么保证安全？
 
@@ -401,15 +377,15 @@ Tool / Function Calling：把 Java 方法或 Bean 暴露给模型调用。
 
 ### Q10：怎么证明你不是只会调 API？
 
-> 我会从工程闭环讲：任务状态机、MQ 异步、幂等、补偿、RAG 检索、混合召回、Prompt 版本、结构化输出、人工复核、日志追踪、成本统计和降级。调 API 只是其中一步，真正上线要解决稳定性、可解释性和业务闭环。
+> 我会从全链路讲：前端复核台与流式体验；Python/Go 侧任务状态、MQ、幂等、补偿；RAG 混合召回与 rerank；Prompt 版本与结构化 JSON；Agent 工具 schema 与权限；人工复核与 badcase 回流；日志 trace 与 token 成本。调 API 只是一环，上线要解决体验、稳定性、可解释性和业务闭环。
 
 ## 11. 七天突击安排
 
 ### Day 1：项目主线
 
-- 背 30 秒自我介绍。
-- 背 2 分钟 AI 质检项目。
-- 背“我不是算法训练方向，我是 AI 应用工程化”。
+- 背 30 秒自我介绍（前端 + AI 工程化）。
+- 背 2 分钟 AI 质检项目（含前端复核台）。
+- 背「我不是算法训练，我是 AI 应用工程化 + 前端落地」。
 
 ### Day 2：RAG 基础
 
@@ -424,11 +400,11 @@ Tool / Function Calling：把 Java 方法或 Bean 暴露给模型调用。
 - 双向召回讲成 BM25 + 向量召回。
 - RRF、rerank、合并去重。
 
-### Day 4：LangChain4j + Spring AI
+### Day 4：Python/Go 编排 + 前端流式
 
-- LangChain4j：AI Service、ContentRetriever、EmbeddingStore、Tools、Memory。
-- Spring AI：ChatClient、Advisor、VectorStore、Tool/Function Calling。
-- 框架选型和生产封装。
+- Python：FastAPI、Pydantic、LangChain/LangGraph、Celery。
+- Go：网关、限流、SSE 代理（按项目选讲）。
+- 前端：SSE 流式、citation、工具调用可视化、debug 面板。
 
 ### Day 5：AI 工程化
 
@@ -461,7 +437,7 @@ LLM JSON 不稳定
 4. HNSW 是什么？
 5. 双向召回怎么做？
 6. topK 和阈值怎么调？
-7. LangChain4j 和 Spring AI 怎么选？
+7. LangChain/LangGraph 和自研怎么选？
 8. LLM 输出 JSON 不稳定怎么办？
 9. 误判率突然升高怎么排查？
 10. 怎么证明你不是只调 API？
@@ -470,6 +446,5 @@ LLM JSON 不稳定
 
 你最后至少要背熟这一段：
 
-> 我做 AI 应用落地时，不会只看模型回答，而是把链路拆开。输入侧有 ASR 文本和业务元数据；知识侧有规则文档、chunk、embedding 和向量库；检索侧会做 BM25 关键词召回和向量语义召回，再合并去重、rerank；模型侧要求结构化 JSON 输出；工程侧有任务状态、重试补偿、日志 trace、成本统计和人工复核。  
-> 如果效果不好，我会先看正确规则有没有召回；没召回就调 chunk、topK、阈值、BM25 和 query 改写；召回了但排名靠后就看 rerank；规则在上下文里但模型判错，才去改 Prompt、模型和输出约束。这个思路比单纯“调大模型接口”更工程化。
+> 我做 AI 应用落地时，会把链路拆开：前端负责流式对话、证据展示和复核；Python/Go 负责 ASR 任务、RAG 检索、模型调用与状态机；知识侧有 chunk、embedding、混合召回和 rerank；模型侧要求结构化 JSON；工程侧有 trace、成本、降级和 badcase。效果不好时，先看规则有没有召回，再查排序和 Prompt，而不是只换模型。
 

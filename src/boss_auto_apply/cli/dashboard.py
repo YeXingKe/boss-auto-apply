@@ -275,7 +275,7 @@ def _start_runner() -> tuple[int, str]:
             "PYTHONIOENCODING": "utf-8",
             "PYTHONUTF8": "1",
             "BOSS_FAST_MODE": "1",
-            "BOSS_PROFILE_NAME": env.get("BOSS_PROFILE_NAME", "chrome_profile_fengshen"),
+            "BOSS_PROFILE_NAME": env.get("BOSS_PROFILE_NAME", "chrome_profile_zws"),
             "BOSS_CHROME_PORT": env.get("BOSS_CHROME_PORT", "9222"),
             "BOSS_COOKIE_FALLBACK": env.get("BOSS_COOKIE_FALLBACK", "0"),
             "BOSS_AI_REPLY": env.get("BOSS_AI_REPLY", "1"),

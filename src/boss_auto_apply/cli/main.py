@@ -1,9 +1,17 @@
 """
-BOSS直聘自动投递工具 - 主入口
-用法:
-  python main.py --login     # 首次登录（扫码）
-  python main.py --run       # 开始自动投递
-  python main.py --report    # 查看投递报告
+BOSS 直聘自动求职助手 - CLI 主入口（总指挥）
+
+业务视角：
+  本文件不负责「怎么点按钮」，只负责编排整条业务线：
+  登录 → 搜岗投递 → 扫聊天回复 →（循环）投递+聊天。
+
+常用命令（推荐用模块方式）：
+  python -m boss_auto_apply --login
+  python -m boss_auto_apply --run --limit 5
+  python -m boss_auto_apply --apply-watch --limit 2 --interval 180
+  python -m boss_auto_apply --report
+
+日常入口 start.bat 最终会走到 cmd_apply_then_watch()。
 """
 import argparse
 import io
@@ -77,15 +85,23 @@ def _write_monitor_state(current_stage: str, **extra) -> None:
     safe_write_json(path, payload)
 
 def load_config():
+    """读取项目根目录 config.yaml：关键词、黑名单、日投上限、招呼语模板等。"""
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 def cmd_login():
+    """业务：首次扫码登录，把登录态写入 Chrome profile / Cookie。"""
     from boss_auto_apply.browser.auth import BossAuth
     auth = BossAuth(DATA_DIR)
     auth.login()
 
 def cmd_run(limit: int | None = None, dry_run: bool = False, auth=None):
+    """
+    业务线 A：只做「搜岗 + 投递」一轮。
+
+    流程：检查画像 → 确认登录 → 按关键词搜索 → JD 过滤/打分 → 点立即沟通。
+    dry_run=True 时只预演不真实发送，适合联调。
+    """
     from boss_auto_apply.browser.auth import BossAuth
     from boss_auto_apply.apply.search import JobSearcher
     from boss_auto_apply.apply.apply import DailyCommunicationLimitReached, JobApplier
@@ -93,6 +109,7 @@ def cmd_run(limit: int | None = None, dry_run: bool = False, auth=None):
     from boss_auto_apply.ai.candidate_profile import missing_required_fields
 
     config = load_config()
+    # 真实投递前必须有姓名/电话等画像，否则回复和招呼语会缺关键信息
     missing_profile = missing_required_fields()
     if missing_profile and not dry_run:
         print(f" 候选人画像未配置完整，拒绝真实投递: {', '.join(missing_profile)}")
@@ -318,7 +335,17 @@ def cmd_resume_sweep(dry_run: bool = False, max_process: int = 200, auth=None):
     return processor.sweep_missing_resumes(max_process=max_process)
 
 def cmd_apply_then_watch(limit: int | None = None, interval: int = 180, rounds: int = 0, resume_sweep: bool = False):
-    """循环执行：每轮投递一批，再处理未读聊天，等待 interval 秒后继续。"""
+    """
+    日常主循环（start.bat 默认入口）。
+
+    业务节奏：
+      1) 本轮最多投 limit 个岗（默认 2）
+      2) 立刻扫未读聊天：AI/规则回复，必要时发在线简历
+      3) 休息 interval 秒（默认 180），降低风控风险
+      4) rounds=0 表示永久循环，直到 Ctrl+C 或 stop_apply.bat
+
+    resume_sweep=True 时，启动先扫历史会话补发漏掉的在线简历。
+    """
     import time
     from boss_auto_apply.browser.auth import BossAuth
     from boss_auto_apply.services.logger import ApplyLogger

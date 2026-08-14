@@ -1,3 +1,13 @@
+"""
+发送前安全闸门（reply_guard）
+
+业务目标：AI/模板生成的文案，发出去前再过一遍：
+  - 去掉「我是AI」等暴露自动化的话
+  - 拦截乱填微信号/手机号等（避免瞎发隐私）
+  - 过长截断、风险词替换为兜底话术
+
+ChatProcessor 在真正 send 之前必须调用 sanitize_reply()。
+"""
 import re
 from boss_auto_apply.ai.candidate_profile import load_resume
 
@@ -27,7 +37,11 @@ BLOCK_PATTERNS = [
 
 
 def sanitize_reply(reply: str, *, intent: str = "", fallback: str = "") -> tuple[str, list[str]]:
-    """Final safety pass before sending a message to HR."""
+    """
+    发送前最终清洗。
+
+    返回 (safe_text, notes)；safe_text 为空表示本条不应发送。
+    """
     text = " ".join((reply or "").strip().split())
     notes: list[str] = []
     if not text:

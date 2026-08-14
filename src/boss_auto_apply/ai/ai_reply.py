@@ -1,11 +1,14 @@
 """
-AI 辅助回复 - 用 Hermes CLI 作为 LLM backend（免费、本地、已配置）
+AI 辅助回复（聊天增强插件，不是整条业务的唯一大脑）
 
-设计原则：
-1. 只有高价值意图才走 AI：ask_tech_detail, ask_project, ask_salary, greeting, match_review
-2. 超时 20s / 失败 / 空输出 → 返回 None，调用方 fallback 到规则引擎
-3. 单次 prompt 自包含：JD + 薪资 + 对话历史 + 简历高亮 + 意图指令
-4. 429 限流短退避重试；其他失败/空输出仍快速 fallback 到规则引擎
+设计原则（业务视角）：
+1. 默认关：BOSS_AI_REPLY=1 才启用
+2. 只服务高价值意图（见 AI_INTENTS）
+3. 失败可回落：超时/空输出 → 返回 None，上层用规则模板
+4. Prompt 自包含：JD + 对话历史 + 简历亮点 + 可选 RAG
+5. 调用写入 data/ai_calls.jsonl（不含 API Key）
+
+Provider：qwen（HTTP）或 hermes（本地 CLI，可走 WSL）
 """
 import subprocess
 import shutil
@@ -92,7 +95,7 @@ RESUME_BRIEF = resume_brief()
 
 
 def should_use_ai(intent: str) -> bool:
-    """判断该意图是否应走 AI"""
+    """业务开关：总开关打开 且 该意图在白名单内，才调大模型。"""
     return AI_ENABLED and intent in AI_INTENTS
 
 
@@ -486,7 +489,12 @@ def call_llm(prompt: str, timeout: int = 60, purpose: str = "reply") -> Optional
 
 
 def ai_generate(intent: str, messages: list, job_info: dict) -> Optional[str]:
-    """主入口：成功返回回复字符串，失败返回 None（调用方用规则引擎 fallback）"""
+    """
+    AI 回复主入口。
+
+    成功：返回要发给 HR 的文本；
+    失败/未启用：返回 None，调用方必须用规则模板兜底。
+    """
     if not should_use_ai(intent):
         return None
     prompt = build_prompt(intent, messages, job_info or {})

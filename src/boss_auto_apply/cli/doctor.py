@@ -45,7 +45,7 @@ def run_checks() -> list[dict]:
     from boss_auto_apply.paths import CONFIG_PATH as config
     checks.append(_ok("config.yaml", "exists") if config.exists() else _fail("config.yaml", "missing"))
 
-    profile_name = os.environ.get("BOSS_PROFILE_NAME", "chrome_profile_fengshen")
+    profile_name = os.environ.get("BOSS_PROFILE_NAME", "chrome_profile_zws")
     profile = DATA / profile_name
     checks.append(_ok("chrome profile", str(profile)) if profile.exists() else _warn("chrome profile", f"not found: {profile}"))
 

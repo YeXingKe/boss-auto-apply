@@ -1,13 +1,14 @@
 """
-BOSS zhipin job search & filter
-2025 DOM: ul.rec-job-list > div.card-area > div.job-card-wrap > li (job card)
-  Inside each li:
-    a.job-name (title + href to detail)
-    .job-salary
-    .tag-list li (experience, education tags)
-    .boss-name (company)
-    .company-location
-Strategy: find all a.job-name, walk up to parent li for full card context
+岗位搜索与粗过滤（业务线 A 的第一步）
+
+业务目标：
+  按 config.yaml 里的关键词打开 BOSS 搜索页，翻页抓岗位卡片，
+  再用黑名单/薪资等规则扔掉明显不合适的，交给 JobApplier 做精细匹配与投递。
+
+2025 DOM 结构大致为：
+  ul.rec-job-list > ... > li（岗位卡）
+  卡内有 a.job-name（标题+详情链接）、薪资、公司名等。
+策略：先找全部 a.job-name，再向上找父级 li 补全字段。
 """
 import time
 import random
@@ -17,6 +18,7 @@ from boss_auto_apply.browser.anti_detect import random_delay, random_scroll
 
 
 class JobSearcher:
+    """按关键词搜索岗位列表，并做黑名单级过滤。"""
     SEARCH_URL = "https://www.zhipin.com/web/geek/job?query={keyword}&city=101280600"
 
     def __init__(self, page, config: dict):
@@ -28,6 +30,12 @@ class JobSearcher:
         self.salary_min_k = config.get("search", {}).get("salary_min_k", 0)
 
     def search(self, keyword: str) -> list:
+        """
+        搜索一个关键词下的岗位。
+
+        返回 list[dict]，常见字段：title / company / salary / url / tags ...
+        空页或翻不动就提前结束，避免死循环。
+        """
         jobs = []
         url = self.SEARCH_URL.format(keyword=quote(keyword))
         self.page.get(url)
@@ -41,6 +49,7 @@ class JobSearcher:
                 print(f"  Page {page_num} empty, stop.", flush=True)
                 break
 
+            # 黑名单等粗过滤：细匹配（JD 打分）在 apply 阶段再做
             filtered = [j for j in page_jobs if self._filter_job(j)]
             jobs.extend(filtered)
             print(f"    Found {len(page_jobs)}, after filter {len(filtered)}", flush=True)

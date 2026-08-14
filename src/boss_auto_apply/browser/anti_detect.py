@@ -1,5 +1,10 @@
 """
-反检测策略
+反检测 / 拟人化节奏
+
+业务目的：操作别太像机器人（连点、无停顿），降低平台风控风险。
+  - random_delay：点击之间随机等待
+  - random_scroll：模拟看 JD 时的滚动
+  - BOSS_FAST_MODE=1 时缩短等待（联调/赶进度用，正式跑慎用）
 """
 import time
 import random
@@ -7,7 +12,7 @@ import os
 
 
 def random_delay(min_sec=None, max_sec=None):
-    """随机延迟，模拟人类操作"""
+    """随机延迟，模拟人类操作间隔。"""
     if min_sec is None:
         min_sec = 3
     if max_sec is None:

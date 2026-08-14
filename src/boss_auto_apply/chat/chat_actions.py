@@ -1,18 +1,18 @@
 """
-BOSS直聘 聊天高级动作模块
-- 发送简历（在线简历 / 附件简历）
-- 交换电话
-- 交换微信
-- 发送图片
+聊天页高级动作（真正「点按钮」的地方）
 
-DOM结构（2026-04实测 via explore_buttons2.py）:
-  工具栏: .chat-controls > .toolbar-btn-content
-    表情:   .btn-emotion (d-c="62005")
-    常用语: .btn-dict (d-c="62003")
-    发图片: .btn-sendimg (input[type=file])
-    发简历: .toolbar-btn (d-c="62009") -> 弹窗 .select-one x2 (.main-title="发送在线简历")
-    换电话: .toolbar-btn-content.btn-contact (d-c="62007") -> 弹窗 .sentence-popover.panel-contact -> 确定
-    换微信: .btn-weixin (d-c="62011") -> 弹窗确认
+业务能力：
+  - 发送在线简历 /（可选）附件简历
+  - 交换电话 / 微信
+  - 发送图片
+
+说明：
+  ChatProcessor 决定「要不要做」；本模块只负责 DOM 操作怎么做。
+  默认策略只发在线简历；附件上传需显式 BOSS_ALLOW_UPLOAD_RESUME=1。
+
+DOM 结构（2026-04 实测）：
+  工具栏 .chat-controls > .toolbar-btn-content
+  发简历: toolbar-btn(d-c=62009) → 弹窗选择「发送在线简历」
 """
 import time
 import os
@@ -21,14 +21,14 @@ from boss_auto_apply.browser.anti_detect import random_delay
 
 
 class ChatActions:
-    """聊天页面高级操作"""
+    """聊天页面高级操作：发简历、换联系方式等。"""
 
     def __init__(self, page):
         self.page = page
 
     # ========== 检查简历是否已发过 ==========
     def _has_resume_in_chat(self) -> bool:
-        """检查当前聊天是否已存在简历卡片（避免重复发送）"""
+        """检查当前聊天 DOM 是否已有简历卡片（避免重复发送）。"""
         try:
             im_list = self.page.ele('.im-list', timeout=2)
             if not im_list:

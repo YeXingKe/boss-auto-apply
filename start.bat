@@ -52,7 +52,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "if (Test-Path '.\.env.local.ps1') { . '.\.env.local.ps1' };" ^
   "$env:PYTHONIOENCODING='utf-8'; $env:PYTHONUTF8='1';" ^
   "$env:PYTHONPATH='%~dp0src';" ^
-  "$env:BOSS_PROFILE_NAME='chrome_profile_fengshen';" ^
+  "$env:BOSS_PROFILE_NAME='chrome_profile_zws';" ^
   "$env:BOSS_CHROME_PORT='9222'; $env:BOSS_COOKIE_FALLBACK='0';" ^
   "$env:BOSS_AI_REPLY='1'; $env:BOSS_RAG_ENABLE='1';" ^
   "if (-not $env:BOSS_AI_PROVIDER) { $env:BOSS_AI_PROVIDER='qwen' };" ^
@@ -73,7 +73,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$env:PYTHONIOENCODING='utf-8'; $env:PYTHONUTF8='1';" ^
   "$env:PYTHONPATH='%~dp0src';" ^
   "$env:BOSS_FAST_MODE='1';" ^
-  "$env:BOSS_PROFILE_NAME='chrome_profile_fengshen';" ^
+  "$env:BOSS_PROFILE_NAME='chrome_profile_zws';" ^
   "$env:BOSS_CHROME_PORT='9222'; $env:BOSS_COOKIE_FALLBACK='0';" ^
   "$env:BOSS_AI_REPLY='1'; $env:BOSS_RAG_ENABLE='1';" ^
   "if (-not $env:BOSS_AI_PROVIDER) { $env:BOSS_AI_PROVIDER='qwen' };" ^
